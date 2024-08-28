@@ -14,9 +14,11 @@ import javax.crypto.Cipher;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 
 public class ECC {
+
     static {
         Security.addProvider(new BouncyCastleProvider());
     }
+
     public static KeyPair generateKeyPair(String curveName) throws GeneralSecurityException {
         KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("EC", "BC");
         keyPairGenerator.initialize(new ECGenParameterSpec(curveName));

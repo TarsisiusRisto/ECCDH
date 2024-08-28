@@ -40,10 +40,7 @@ public class Client {
             }
 
             // Start client socket
-            try (Socket socket = new Socket(KEY_SERVER_ADDRESS, 8888);
-                 PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
-                 BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-                 Scanner scanner = new Scanner(System.in)) {
+            try (Socket socket = new Socket(KEY_SERVER_ADDRESS, 8888); PrintWriter out = new PrintWriter(socket.getOutputStream(), true); BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream())); Scanner scanner = new Scanner(System.in)) {
 
                 System.out.println("Connected to server: " + socket.getRemoteSocketAddress());
                 while (true) {
@@ -78,9 +75,7 @@ public class Client {
     }
 
     private static void storePublicKey(String clientId) throws IOException {
-        try (Socket socket = new Socket(KEY_SERVER_ADDRESS, KEY_SERVER_PORT);
-             PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
-             BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
+        try (Socket socket = new Socket(KEY_SERVER_ADDRESS, KEY_SERVER_PORT); PrintWriter out = new PrintWriter(socket.getOutputStream(), true); BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
 
             out.println("STORE " + clientId);
             String encodedPublicKey = Base64.getEncoder().encodeToString(keyPair.getPublic().getEncoded());
@@ -96,9 +91,7 @@ public class Client {
         }
 
         // Fetch from key server if not cached or cache is expired
-        try (Socket socket = new Socket(KEY_SERVER_ADDRESS, KEY_SERVER_PORT);
-             PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
-             BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
+        try (Socket socket = new Socket(KEY_SERVER_ADDRESS, KEY_SERVER_PORT); PrintWriter out = new PrintWriter(socket.getOutputStream(), true); BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
 
             out.println("RETRIEVE " + clientId);
             String response = in.readLine();
