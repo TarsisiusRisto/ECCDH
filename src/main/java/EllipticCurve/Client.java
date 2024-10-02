@@ -17,8 +17,11 @@ import java.util.Scanner;
 
 public class Client {
 
-    private static final String KEY_SERVER_ADDRESS = "localhost";
+    private static final String KEY_SERVER_ADDRESS = "192.168.56.1"; // ip dari KeyServer agar dapat terkoneksi dengan KeyServer agar dapat mengirimkan public Key client ke KeyServer
+    // private static final String KEY_SERVER_ADDRESS = "localhost";
+    private static final String SERVER_ADDRESS = "203.0.113.138"; // ip dari Server, yang digunakan agar dapat berkomunikasi dengan Server
     private static final int KEY_SERVER_PORT = 9999;
+    private static final int PORT = 8888;
     private static KeyPair keyPair;
     private static final Map<String, PublicKey> publicKeyCache = new HashMap<>();
     private static final Map<String, Long> cacheTimestamps = new HashMap<>();
@@ -40,7 +43,7 @@ public class Client {
             }
 
             // Start client socket
-            try (Socket socket = new Socket(KEY_SERVER_ADDRESS, 8888); PrintWriter out = new PrintWriter(socket.getOutputStream(), true); BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream())); Scanner scanner = new Scanner(System.in)) {
+            try (Socket socket = new Socket(SERVER_ADDRESS, PORT); PrintWriter out = new PrintWriter(socket.getOutputStream(), true); BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream())); Scanner scanner = new Scanner(System.in)) {
 
                 System.out.println("Connected to server: " + socket.getRemoteSocketAddress());
                 while (true) {

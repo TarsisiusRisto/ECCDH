@@ -17,9 +17,9 @@ import java.util.Map;
 import java.util.Scanner;
 
 public class Server {
-
     private static final int PORT = 8888;
-    private static final String KEY_SERVER_ADDRESS = "localhost";
+    private static final String KEY_SERVER_ADDRESS = "192.168.56.1";
+    // private static final String KEY_SERVER_ADDRESS = "localhost";
     private static final int KEY_SERVER_PORT = 9999;
     private static KeyPair keyPair;
     private static PublicKey clientPublicKey;
