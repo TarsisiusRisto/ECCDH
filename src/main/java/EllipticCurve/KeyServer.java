@@ -42,12 +42,12 @@ public class KeyServer {
                     String publicKey = in.readLine();
                     keyStore.put(clientID, publicKey);
                     out.println("Public key stored successfully.");
-                    System.out.println("Stored public key for ID: " + clientID + " - " + publicKey);
+                    System.out.println("Stored public key for ID: " + clientID + " - " + publicKey + "\n");
                 } else if (request.startsWith("RETRIEVE")) {
                     String clientID = request.split(" ")[1];
                     String publicKey = keyStore.getOrDefault(clientID, "Key not found for ID: " + clientID);
                     out.println(publicKey);
-                    System.out.println("Retrieved public key for ID: " + clientID + " - " + publicKey);
+                    System.out.println("Retrieved public key for ID: " + clientID + " - " + publicKey + "\n");
                 } else {
                     out.println("Invalid request");
                 }

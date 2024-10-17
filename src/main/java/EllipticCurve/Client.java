@@ -17,7 +17,7 @@ import java.util.Scanner;
 
 public class Client {
 
-    private static final String KEY_SERVER_ADDRESS = "192.168.56.1"; // ip dari KeyServer agar dapat terkoneksi dengan KeyServer agar dapat mengirimkan public Key client ke KeyServer
+    private static final String KEY_SERVER_ADDRESS = "192.168.187.1"; // ip dari KeyServer agar dapat terkoneksi dengan KeyServer agar dapat mengirimkan public Key client ke KeyServer
     // private static final String KEY_SERVER_ADDRESS = "localhost";
     private static final String SERVER_ADDRESS = "203.0.113.138"; // ip dari Server, yang digunakan agar dapat berkomunikasi dengan Server
     private static final int KEY_SERVER_PORT = 9999;
@@ -45,13 +45,17 @@ public class Client {
             // Start client socket
             try (Socket socket = new Socket(SERVER_ADDRESS, PORT); PrintWriter out = new PrintWriter(socket.getOutputStream(), true); BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream())); Scanner scanner = new Scanner(System.in)) {
 
-                System.out.println("Connected to server: " + socket.getRemoteSocketAddress());
+                System.out.println("Connected to server: " + socket.getRemoteSocketAddress() + "\n");
                 while (true) {
                     long startTime = System.currentTimeMillis(); // Reset startTime for new iteration
                     System.out.print("Enter message to send to server: ");
                     String message = scanner.nextLine();
+                    if ("exit".equalsIgnoreCase(message)){
+                        System.out.println("Disconnected");
+                        break;
+                    }  
                     String encryptedMessage = Base64.getEncoder().encodeToString(ECC.encrypt(message, serverPublicKey));
-                    System.out.println("Sending encrypted message: " + encryptedMessage);
+                    System.out.println("Sending encrypted message: " + encryptedMessage + "\n");
                     out.println(encryptedMessage);
                     out.flush();
 
@@ -60,10 +64,9 @@ public class Client {
                     if (encryptedResponse != null) {
                         String decryptedResponse = ECC.decrypt(encryptedResponse, keyPair.getPrivate());
                         long receivedTime = System.currentTimeMillis();
-                        System.out.println("Received decrypted response: " + decryptedResponse);
-
+                        System.out.println("Received message from server: " + decryptedResponse);
                         // Print latency
-                        System.out.println("Latency for sending message: " + (receivedTime - startTime) + " ms");
+                        System.out.println("Latency : " + (receivedTime - startTime) + " ms" + "\n");
                     } else {
                         System.out.println("No response received.");
                         break;

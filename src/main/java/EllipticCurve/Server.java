@@ -14,11 +14,11 @@ import java.security.spec.X509EncodedKeySpec;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Scanner;
 
 public class Server {
+
     private static final int PORT = 8888;
-    private static final String KEY_SERVER_ADDRESS = "192.168.56.1";
+    private static final String KEY_SERVER_ADDRESS = "192.168.187.1";
     // private static final String KEY_SERVER_ADDRESS = "localhost";
     private static final int KEY_SERVER_PORT = 9999;
     private static KeyPair keyPair;
@@ -41,20 +41,19 @@ public class Server {
             try (ServerSocket serverSocket = new ServerSocket(PORT)) {
                 System.out.println("Server started on port " + PORT);
 
-                try (Socket clientSocket = serverSocket.accept();
-                     PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true);
-                     BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
-                     Scanner scanner = new Scanner(System.in)) {
+                try (Socket clientSocket = serverSocket.accept(); PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true); BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()))) {
 
-                    System.out.println("Client connected: " + clientSocket.getRemoteSocketAddress());
+                    System.out.println("Client connected: " + clientSocket.getRemoteSocketAddress() + "\n");
 
                     while (true) {
                         long startTime = System.currentTimeMillis(); // Reset startTime for new iteration
                         String encryptedMessage = in.readLine();
                         if (encryptedMessage != null) {
                             long receivedTime = System.currentTimeMillis();
+
+                            // Decrypt the message sent by the client
                             String decryptedMessage = ECC.decrypt(encryptedMessage, keyPair.getPrivate());
-                            System.out.println("Received message from client: " + decryptedMessage);
+                            System.out.println("Received and decrypted message from client: " + decryptedMessage);
 
                             // Get the client public key from cache or key server
                             clientPublicKey = getCachedPublicKey("Client");
@@ -63,40 +62,36 @@ public class Server {
                                 continue;
                             }
 
-                            System.out.print("Enter message to send to client: ");
-                            String responseMessage = scanner.nextLine();
-                            String encryptedResponse = Base64.getEncoder().encodeToString(ECC.encrypt(responseMessage, clientPublicKey));
+                            // Send back the decrypted message to the client (encrypted with client's public key)
+                            String encryptedResponse = Base64.getEncoder().encodeToString(ECC.encrypt(decryptedMessage, clientPublicKey));
                             long sendTime = System.currentTimeMillis();
-                            System.out.println("Sending encrypted response: " + encryptedResponse);
+                            System.out.println("Sending same message from client : " + encryptedResponse + "\n");
                             out.println(encryptedResponse);
-                            // out.flush();
 
                             // Print latencies
                             System.out.println("Latency for receiving message: " + (receivedTime - startTime) + " ms");
-                            System.out.println("Latency for sending response: " + (sendTime - receivedTime) + " ms");
-                            
-                            // Reset startTime if needed for new operations or logic
-                        } else {
+                            System.out.println("Latency for sending response: " + (sendTime - receivedTime) + " ms" + "\n");
+                        } else if (encryptedMessage == null) {
                             System.out.println("No message received from client.");
                             if (clientSocket.isClosed() || !clientSocket.isConnected()) {
                                 System.out.println("Client disconnected. Waiting for new connection...");
                                 break; // Exit loop to accept a new client connection
                             }
+                            clientSocket.close();
                         }
                     }
                 }
             } catch (IOException e) {
+                e.printStackTrace();
             }
 
         } catch (Exception e) {
-            // e.printStackTrace();
+            e.printStackTrace();
         }
     }
 
     private static void storePublicKey(String clientId) throws IOException {
-        try (Socket socket = new Socket(KEY_SERVER_ADDRESS, KEY_SERVER_PORT);
-             PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
-             BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
+        try (Socket socket = new Socket(KEY_SERVER_ADDRESS, KEY_SERVER_PORT); PrintWriter out = new PrintWriter(socket.getOutputStream(), true); BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
 
             out.println("STORE " + clientId);
             String encodedPublicKey = Base64.getEncoder().encodeToString(keyPair.getPublic().getEncoded());
@@ -112,9 +107,7 @@ public class Server {
         }
 
         // Fetch from key server if not cached or cache is expired
-        try (Socket socket = new Socket(KEY_SERVER_ADDRESS, KEY_SERVER_PORT);
-             PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
-             BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
+        try (Socket socket = new Socket(KEY_SERVER_ADDRESS, KEY_SERVER_PORT); PrintWriter out = new PrintWriter(socket.getOutputStream(), true); BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
 
             out.println("RETRIEVE " + clientId);
             String response = in.readLine();

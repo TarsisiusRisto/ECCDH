@@ -1,87 +1,105 @@
-// package ECDH;
+package ECDH;
 
-// import java.io.BufferedReader;
-// import java.io.IOException;
-// import java.io.InputStreamReader;
-// import java.io.PrintWriter;
-// import java.net.Socket;
-// import java.security.KeyFactory;
-// import java.security.KeyPair;
-// import java.security.PublicKey;
-// import java.security.spec.X509EncodedKeySpec;
-// import java.util.Base64;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.io.PrintWriter;
+import java.net.Socket;
+import java.security.KeyPair;
+import java.security.PrivateKey;
+import java.security.PublicKey;
+import java.util.Base64;
+import java.util.Scanner;
 
-// public class Client extends Thread {
-//     private final Socket clientSocket;
-//     private final KeyPair keyPair;
-//     private PublicKey serverPublicKey;
-//     private PrintWriter out;
-//     private BufferedReader in;
+import javax.crypto.SecretKey;
 
-//     public Client(String serverAddr, int serverPort, KeyPair keyPair) throws IOException {
-//         this.clientSocket = new Socket(serverAddr, serverPort);
-//         this.keyPair = keyPair;
-//         this.serverPublicKey = null; // Server public key will be received from the server
+public class Client {
+    private KeyPair clientKeyPair;
+    private PrivateKey clientPrivateKey;
+    private PublicKey serverPublicKey;
+    private static final String SERVER_ADDRESS = "203.0.113.138";
 
-//         // Initialize input and output streams
-//         out = new PrintWriter(clientSocket.getOutputStream(), true);
-//         in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+    public Client() {
+        try {
+            // Generate ECC key pair for the client
+            ECDH ecdh = new ECDH();
+            clientKeyPair = ecdh.generateECCKeyPair();
+            clientPrivateKey = clientKeyPair.getPrivate();
 
-//         // Send client's public key to the server
-//         out.println(Base64.getEncoder().encodeToString(keyPair.getPublic().getEncoded()));
+            startClient();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
 
-//         // Receive server's public key
-//         try {
-//             String serverPublicKeyStr = in.readLine();
-//             byte[] serverPublicKeyBytes = Base64.getDecoder().decode(serverPublicKeyStr);
-//             serverPublicKey = KeyFactory.getInstance("EC").generatePublic(new X509EncodedKeySpec(serverPublicKeyBytes));
-//         } catch (Exception e) {
-//             e.printStackTrace();
-//         }
+    private void startClient() {
+        try (Socket clientSocket = new Socket(SERVER_ADDRESS, 8888)) {
+            BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+            PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true);
+            // Connected 
+            System.out.println("Connected to server: " + clientSocket.getRemoteSocketAddress() + "\n");
 
-//         // Create a thread to continuously listen for messages from the server
-//         new Thread(() -> {
-//             try {
-//                 String message;
-//                 while ((message = in.readLine()) != null) {
-//                     if (message.equalsIgnoreCase("quit")) {
-//                         break;
-//                     }
-//                     System.out.println("Message from server before decryption: " + message);
-//                     String decryptedMessage = DHECCExample.decrypt(Base64.getDecoder().decode(message), DHECCExample.performDHKeyAgreement(keyPair.getPrivate(), serverPublicKey), keyPair.getPrivate());
-//                     System.out.println("Message from server (decrypted): " + decryptedMessage);
-//                 }
-//             } catch (Exception e) {
-//                 e.printStackTrace();
-//             }
-//         }).start();
-//     }
+            // Receive server's public key
+            String serverPublicKeyStr = in.readLine();             
+            byte[] serverPublicKeyBytes = Base64.getDecoder().decode(serverPublicKeyStr);
+            serverPublicKey = ECDH.getPublicKeyFromEncoded(serverPublicKeyBytes);
 
-//     public void sendMessage(String message) {
-//         try {
-//             if (out != null) {
-//                 byte[] encryptedMessage = DHECCExample.encrypt(message, DHECCExample.performDHKeyAgreement(keyPair.getPrivate(), serverPublicKey), serverPublicKey);
-//                 String encodedMessage = Base64.getEncoder().encodeToString(encryptedMessage);
-//                 out.println(encodedMessage);
-//                 System.out.println("Encrypted message sent to server: " + encodedMessage);
-//             }
-//         } catch (Exception e) {
-//             e.printStackTrace();
-//         }
-//     }
+            // Send client's public key to server
+            String clientEncodedPublicKey = Base64.getEncoder().encodeToString(clientKeyPair.getPublic().getEncoded());
+            out.println(clientEncodedPublicKey);
 
-//     @Override
-//     public void run() {
-//         // Perform any additional tasks after initialization, if needed
-//     }
+            // Generate shared secret using ECDH
+            // byte[] sharedSecret = ECDH.generateECDHSharedSecret(clientPrivateKey, serverPublicKey);
+            // SecretKey symmetricKey = new SecretKeySpec(sharedSecret, 0, 16, "AES");
 
-//     public static void main(String[] args) {
-//         try {
-//             KeyPair keyPair = DHECCExample.generateECCKeyPair("secp256r1");
-//             Client client = new Client("localhost", 8888, keyPair);
-//             client.sendMessage("Hello, Server!");
-//         } catch (Exception e) {
-//             e.printStackTrace();
-//         }
-//     }
-// }
+            // Receive encrypted symmetric key from server
+            String encryptedSymmetricKeyStr = in.readLine();
+            byte[] serverEncryptedSymmetricKey = Base64.getDecoder().decode(encryptedSymmetricKeyStr);
+
+            // Decrypt the symmetric key with ECC
+            SecretKey clientDecryptedSymmetricKey = ECDH.decryptSymmetricKey(serverEncryptedSymmetricKey, clientPrivateKey);
+
+            try (Scanner scanner = new Scanner(System.in)) {
+                while (true) {
+                    // Start Time
+                    long startTime = System.currentTimeMillis();
+
+                    // Input message to send to the server
+                    System.out.print("Enter message : ");
+                    String message = scanner.nextLine();
+                    if ("exit".equalsIgnoreCase(message)) break; // Exit loop if user types "exit"
+
+                    // Encrypt the message
+                    byte[] iv = new byte[16];
+                    new java.security.SecureRandom().nextBytes(iv);
+                    byte[] encryptedMessage = ECDH.encryptData(clientDecryptedSymmetricKey, message, iv);
+
+                    // Send encrypted message and IV to server
+                    String base64EncryptedMessage = Base64.getEncoder().encodeToString(encryptedMessage);
+                    String base64IV = Base64.getEncoder().encodeToString(iv);
+                    out.println(base64EncryptedMessage);
+                    out.println(base64IV);
+
+                    // Receive echoed message from server
+                    String serverEncryptedResponse = in.readLine();
+                    String serverIV = in.readLine();
+                    byte[] serverEncryptedBytes = Base64.getDecoder().decode(serverEncryptedResponse);
+                    String serverDecryptedResponse = ECDH.decryptData(clientDecryptedSymmetricKey, serverEncryptedBytes, Base64.getDecoder().decode(serverIV));
+
+                    // End Time
+                    long endTime = System.currentTimeMillis();
+                    long latency = endTime - startTime;
+                    System.out.println("Response message encrypted from server : " + serverEncryptedResponse);
+                    System.out.println("Response message from server: " + serverDecryptedResponse);
+                    System.out.println("Latency : " + latency + "ms \n");
+                }
+            }
+            clientSocket.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static void main(String[] args) {
+        new Client();
+    }
+}
